@@ -22,9 +22,8 @@ contract AiShare is ERC20Burnable, Operator {
     uint256 public constant FARMING_POOL_REWARD_ALLOCATION = 30000 ether;
     uint256 public constant COMMUNITY_FUND_POOL_ALLOCATION = 4000 ether;
     uint256 public constant DEV_FUND_POOL_ALLOCATION = 4000 ether;
-    uint256 public constant INITIAL = 100 ether;
+    uint256 public constant INITIAL = 1 ether;
     uint256 public constant VESTING_DURATION = 300 days;
-    uint256 public constant MULTIPLIER = 100;
 
     uint256 public startTime;
     uint256 public endTime;
@@ -42,9 +41,9 @@ contract AiShare is ERC20Burnable, Operator {
     IUniswapV2Router02 public immutable uniswapV2Router;
     address public immutable BOND;
     AiOMB public immutable AIO;
-    address public immutable BUSD;
-    address public immutable PairWBNB;
-    address public immutable PairBUSD;
+    address public immutable USDC;
+    address public immutable PairWETH;
+    address public immutable PairUSDC;
     address public immutable PairAIO;
     address public immutable genesisAddress;
     address public immutable boardroom;
@@ -78,25 +77,23 @@ contract AiShare is ERC20Burnable, Operator {
         _;
     }
 
-    constructor(address _BOND, address _AIO, address _BUSD, address _router, address _genesisAddress, address _treasury, address _boardroom, address _shareRewardPool, uint256 _startTime, address _communityFund, address _devFund) ERC20("Golden Drip Share", "GDS") {
+    constructor(address _BOND, address _AIO, address _USDC, address _router, address _genesisAddress, address _treasury, address _boardroom, address _shareRewardPool, uint256 _startTime, address _communityFund, address _devFund) ERC20("Ai-Share", "AIS") {
         _mint(msg.sender, INITIAL); 
         BOND = _BOND;
         AIO = AiOMB(_AIO);
-        BUSD = _BUSD;
+        USDC = _USDC;
 
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(_router);
         uniswapV2Router = _uniswapV2Router;
 
-        PairWBNB = IUniswapV2Factory(_uniswapV2Router.factory())
+        PairWETH = IUniswapV2Factory(_uniswapV2Router.factory())
             .createPair(address(this), _uniswapV2Router.WETH());
 
-        PairBUSD = IUniswapV2Factory(_uniswapV2Router.factory())
-            .createPair(address(this), BUSD);
+        PairUSDC = IUniswapV2Factory(_uniswapV2Router.factory())
+            .createPair(address(this), USDC);
 
         PairAIO = IUniswapV2Factory(_uniswapV2Router.factory())
             .createPair(address(this), address(AIO));
-
-        AIO.setPairAiShare(PairAIO);
 
         genesisAddress = _genesisAddress;
         treasury = _treasury;
@@ -146,8 +143,8 @@ contract AiShare is ERC20Burnable, Operator {
     function setWhiteList(address _WhiteList) public onlyAdmin {
         require(isContract(_WhiteList) == true, "only contracts can be whitelisted");
         require(address(uniswapV2Router) != _WhiteList, "set tax to 0 if you want to remove fee from trading");
-        require(PairWBNB != _WhiteList, "set tax to 0 if you want to remove fee from trading");
-        require(PairBUSD != _WhiteList, "set tax to 0 if you want to remove fee from trading");
+        require(PairWETH != _WhiteList, "set tax to 0 if you want to remove fee from trading");
+        require(PairUSDC != _WhiteList, "set tax to 0 if you want to remove fee from trading");
         require(PairAIO != _WhiteList, "set tax to 0 if you want to remove fee from trading");
 
 		whitelist[_WhiteList] = true;
@@ -211,19 +208,16 @@ contract AiShare is ERC20Burnable, Operator {
     }
     
     function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
-         if (whitelist[sender] == true || whitelist[recipient] == true ) {
+        if (whitelist[sender] == true || whitelist[recipient] == true ) {
             super._transfer(sender, recipient, amount);
         }
         else {
-        
-        uint256 taxRateMultiplied = taxRate * MULTIPLIER;
-        uint256 taxAmount = amount.mul(taxRateMultiplied).div(10000);
-        uint256 amountAfterTax = amount.sub(taxAmount);
+            uint256 taxAmount = amount.mul(taxRate).div(100);
+            uint256 amountAfterTax = amount.sub(taxAmount);
 
-        _transfer(sender, taxCollectorAddress, taxAmount);
-        _transfer(sender, recipient, amountAfterTax);
-        
-         }
+            _transfer(sender, taxCollectorAddress, taxAmount);
+            _transfer(sender, recipient, amountAfterTax);
+        }
 
         _approve(sender, _msgSender(), allowance(sender, _msgSender()).sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;
@@ -234,14 +228,11 @@ contract AiShare is ERC20Burnable, Operator {
             super._transfer(_msgSender(), recipient, amount);
         }
          else {
+            uint256 taxAmount = amount.mul(taxRate).div(100);
+            uint256 amountAfterTax = amount.sub(taxAmount);
 
-        uint256 taxRateMultiplied = taxRate * MULTIPLIER;
-
-        uint256 taxAmount = amount.mul(taxRateMultiplied).div(10000);
-        uint256 amountAfterTax = amount.sub(taxAmount);
-
-        _transfer(_msgSender(), taxCollectorAddress, taxAmount);
-        _transfer(_msgSender(), recipient, amountAfterTax);
+            _transfer(_msgSender(), taxCollectorAddress, taxAmount);
+            _transfer(_msgSender(), recipient, amountAfterTax);
         }
 
         return true;

@@ -50,7 +50,7 @@ contract GenesisRewardPool is Initializable, ReentrancyGuard {
     // The time when TOKEN mining ends.
     uint256 public poolEndTime;
 
-    uint256 public tokenPerSecond = 0.0723379630 ether; // 12500 TOKEN / (48h * 60min * 60s)            
+    uint256 public tokenPerSecond = 0.0723379629 ether; // 12500 TOKEN / (48h * 60min * 60s)            
     uint256 public runningTime = 2 days; // 2 days
     uint256 public constant TOTAL_REWARDS = 12500 ether;
 
